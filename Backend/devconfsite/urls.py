@@ -15,4 +15,10 @@ urlpatterns = [
         views.EditorialDetailAPIView.as_view(),
         name="api-editorial-detalle",
     ),
+    path("resenas/", views.ResenaListCreateAPIView.as_view(), name="api-resenas"),
+    path(
+        "resenas/<str:resena_id>/",
+        views.ResenaDetailAPIView.as_view(),
+        name="api-resena-detalle",
+    ),
 ]

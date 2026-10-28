@@ -26,7 +26,7 @@ En `settings.py`: `DEBUG = True`, `ALLOWED_HOSTS` vacío y `SECRET_KEY` escrita 
 | # | Hallazgo | OWASP | Evidencia | Corrección | Estado |
 |---|---|---|---|---|---|
 | 1 | `SECRET_KEY` en el código | A04 | `settings.py`, aviso W009 | | Pendiente |
-| 2 | Crear/editar/borrar sin login | A01 | `AllowAny` en la API | Rutas de escritura con `@autenticado()` (falta el rol: Parte 3) | Mitigado |
+| 2 | Crear/editar/borrar sin login | A01 | `AllowAny` en la API | Rutas de escritura solo para `admin` con `@autenticado(rol="admin")` | Corregido |
 | 3 | CORS abierto | A02 | Respuesta con `access-control-allow-origin: *` | | Pendiente |
 | 4 | `DEBUG = True` | A02 | `settings.py`, aviso W018 | | Pendiente |
 | 5 | Sin HTTPS | A04 | Se abría con `http://` | HTTPS con mkcert | Corregido |
@@ -82,3 +82,37 @@ Crear un libro sin sesión responde 401:
 
 Sexto intento fallido bloqueado (429):
 ![Límite](evidencias/limite-429.png)
+
+## Parte 3 — Roles y control de acceso
+
+| Rol | Ver catálogo | Escribir reseñas | Crear/editar/borrar libros | Ver reseñas |
+|---|---|---|---|---|
+| Visitante | Sí | No | No | No |
+| Cliente | Sí | Sí | No | Solo las suyas |
+| Administrador | Sí | Sí | Sí | Todas |
+
+- Crear, editar y borrar libros o editoriales exige `@autenticado(rol="admin")`. La verificación es en el servidor, no escondiendo botones.
+- El administrador se crea desde `python manage.py shell` poniendo `is_staff = True`; no hay ningún endpoint público para hacerlo.
+- **IDOR:** el proyecto no tenía recursos con dueño, así que se agregaron **reseñas** (`/api/resenas/`). Cada consulta filtra por el usuario del token y el dueño nunca se toma del cuerpo de la petición.
+
+| Prueba | Resultado |
+|---|---|
+| Cliente hace `DELETE /api/libros/<id>` | 403 «Sin permiso» |
+| Administrador crea y borra un libro | 201 y 204 |
+| B pide la reseña de A | 404 (no revela que existe) |
+| B intenta borrar la reseña de A | 404 |
+| Administrador ve la reseña de A | 200 |
+
+**Evidencias** (tomadas en Chrome)
+
+Cliente intenta crear un libro → 403:
+![Cliente 403](evidencias/rol-cliente-403.png)
+
+Administrador crea un libro → 201:
+![Admin 201](evidencias/rol-admin-201.png)
+
+B pide la reseña de A → 404:
+![IDOR 404](evidencias/idor-404.png)
+
+Administrador ve la reseña de A → 200:
+![Admin 200](evidencias/idor-admin-200.png)

@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fondo: #faf7f2;
+  --color-tinta: #3a352e;
+  --color-tinta-suave: #7a7368;
+  --color-acento: #b5603f;
+  --color-acento-suave: #efe1d6;
+  --color-linea: #e6ddd0;
+  --color-peligro: #a33a3a;
+
+  --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --font-sans: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-fondo text-tinta font-sans text-[17px] leading-relaxed;
+  }
+
+  h1,
+  h2 {
+    @apply font-serif font-normal;
+  }
+}
+
+@layer components {
+  .boton {
+    @apply inline-block cursor-pointer rounded bg-acento px-[1.1rem] py-[0.55rem] text-[0.9rem] text-white hover:opacity-90;
+  }
+
+  .boton-peligro {
+    @apply bg-peligro;
+  }
+
+  .volver {
+    @apply text-[0.95rem] text-tinta-suave hover:underline;
+  }
+}

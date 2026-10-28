@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.mypy_cache/
+
+# Node / Next
+node_modules/
+.next/
+
+# Secretos y certificados
+.env
+certs/
+*.pem

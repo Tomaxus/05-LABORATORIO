@@ -32,6 +32,7 @@ En `settings.py`: `DEBUG = True`, `ALLOWED_HOSTS` vacío y `SECRET_KEY` escrita 
 | 5 | Sin HTTPS | A04 | Se abría con `http://` | HTTPS con mkcert | Corregido |
 | 6 | `ALLOWED_HOSTS` vacío | A02 | Aviso W020 | | Pendiente |
 | 7 | Sin login ni límite de intentos | A07 | No hay usuarios | Registro con hash, login con JWT en cookie y límite de 5 intentos | Corregido |
+| 8 | XSS almacenado en reseñas (al crearlas) | A05 | `alert('XSS')` con `dangerouslySetInnerHTML` | Texto escapado por React + CSP con nonce | Corregido |
 
 
 ## Parte 1 — HTTPS
@@ -116,3 +117,31 @@ B pide la reseña de A → 404:
 
 Administrador ve la reseña de A → 200:
 ![Admin 200](evidencias/idor-admin-200.png)
+
+## Parte 4 — XSS
+
+- **Dónde:** el proyecto no tenía texto libre, así que se usaron las **reseñas** de la Parte 3, que se muestran en la página de cada libro.
+- **Ataque:** primero se mostró la reseña con `dangerouslySetInnerHTML` y se publicó `<img src=x onerror="alert('XSS')">`. Apareció la alerta: **XSS almacenado** (A05).
+- **Corrección:** la reseña se muestra como texto (`<p>{r.texto}</p>`). React escapa el contenido y se ve el texto literal.
+- **Refuerzo con CSP:** el frontend (Next) envía una `Content-Security-Policy` con un *nonce* distinto en cada petición (`src/proxy.ts`), además de `X-Content-Type-Options: nosniff` y `X-Frame-Options: DENY`. El backend también envía su CSP (`cuentas/middleware.py`).
+- **Defensa en profundidad:** con la CSP activa se volvió a poner temporalmente el código vulnerable. La alerta ya no apareció: el navegador bloqueó el `onerror` en línea y lo reportó en la consola. Después se restauró la corrección.
+
+| Prueba | Resultado |
+|---|---|
+| Código vulnerable sin CSP | Se ejecuta `alert('XSS')` |
+| Código corregido | Se ve el texto literal, sin alerta |
+| Código vulnerable con CSP | Sin alerta; error de CSP en la consola |
+
+**Evidencias**
+
+XSS almacenado antes de corregir:
+![XSS](evidencias/xss-alerta.png)
+
+Después de corregir, la reseña se ve como texto:
+![Corregido](evidencias/xss-corregido.png)
+
+La CSP bloquea el `onerror` aunque el código sea vulnerable:
+![CSP](evidencias/csp-bloqueo.png)
+
+Cabeceras de seguridad en la respuesta:
+![Cabeceras](evidencias/cabeceras-csp.png)

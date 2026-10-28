@@ -113,3 +113,17 @@ export function rutaImagen(imagen: string) {
   }
   return `/${imagen}`;
 }
+
+export type Resena = {
+  id: string;
+  libro: string;
+  usuario: string;
+  texto: string;
+  creada: string;
+};
+
+export const listarResenas = (libroId: string) =>
+  pedir<Resena[]>(`/resenas?libro=${encodeURIComponent(libroId)}`);
+
+export const crearResena = (libroId: string, texto: string) =>
+  pedir<Resena>("/resenas", { method: "POST", body: JSON.stringify({ libro_id: libroId, texto }) });

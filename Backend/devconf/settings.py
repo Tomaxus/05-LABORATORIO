@@ -32,6 +32,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'cuentas.middleware.CSPMiddleware',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True

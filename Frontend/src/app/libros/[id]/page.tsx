@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Cargando, ErrorApi } from "@/components/Estado";
 import Ficha from "@/components/Ficha";
 import Portada from "@/components/Portada";
+import Resenas from "@/components/Resenas";
 import { obtenerLibro } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 
@@ -42,6 +43,8 @@ export default function Detalle() {
         <Link href={`/libros/${libro.id}/editar`} className="boton">Editar</Link>
         <Link href={`/libros/${libro.id}/eliminar`} className="boton boton-peligro">Eliminar</Link>
       </div>
+
+      <Resenas libroId={libro.id} />
 
       <Link href="/libros" className="volver">&larr; Volver al catálogo</Link>
     </article>

@@ -55,6 +55,9 @@ MIGRATION_MODULES = {
 
 JWT_SECRET = os.environ['JWT_SECRET']  # se carga del .env
 
+# CSRF (Parte 5)
+CSRF_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_HTTPONLY = False  # el frontend debe poder leerla para enviarla en X-CSRFToken
 # El frontend (Next) llega por su proxy desde este origen
 CSRF_TRUSTED_ORIGINS = ['https://localhost:3000', 'https://localhost:8443']
 

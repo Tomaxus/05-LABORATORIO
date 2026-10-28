@@ -5,6 +5,7 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
+from django.middleware.csrf import CsrfViewMiddleware
 
 
 def rol_de(user):
@@ -33,6 +34,16 @@ def registrar_fallo(request, ventana=900):
     cache.incr(clave)
 
 
+def _falla_csrf(request):
+    # Django REST marca sus vistas como csrf_exempt: se repite aquí la comprobación
+    # de Django (cookie csrftoken = cabecera X-CSRFToken y origen de confianza)
+    django_request = getattr(request, '_request', request)
+    if django_request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+        return None
+    django_request.csrf_processing_done = False
+    return CsrfViewMiddleware(lambda r: None).process_view(django_request, None, (), {})
+
+
 def autenticado(rol=None):
     def deco(vista):
         @wraps(vista)
@@ -45,6 +56,8 @@ def autenticado(rol=None):
                 return JsonResponse({'error': 'No autenticado'}, status=401)
             if rol and datos.get('rol') != rol:
                 return JsonResponse({'error': 'Sin permiso'}, status=403)
+            if _falla_csrf(request) is not None:
+                return JsonResponse({'error': 'Token CSRF inválido'}, status=403)
             request.usuario_id = datos['sub']  # ObjectId de MongoDB como texto
             request.rol = datos['rol']
             return vista(request, *args, **kwargs)

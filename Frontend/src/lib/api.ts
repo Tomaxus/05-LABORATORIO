@@ -40,11 +40,30 @@ export class ApiError extends Error {
   }
 }
 
+function leerCookie(nombre: string) {
+  const par = document.cookie.split("; ").find((c) => c.startsWith(nombre + "="));
+  return par ? decodeURIComponent(par.split("=")[1]) : "";
+}
+
+// Pide la cookie csrftoken al backend si todavía no existe
+async function asegurarCsrf() {
+  if (!leerCookie("csrftoken")) {
+    await fetch("/api/auth/csrf", { credentials: "include" });
+  }
+  return leerCookie("csrftoken");
+}
+
 async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
-  const respuesta = await fetch(`/api${ruta}`, {
-    ...opciones,
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-  });
+  const metodo = (opciones.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (metodo !== "GET") {
+    headers["X-CSRFToken"] = await asegurarCsrf();
+  }
+
+  const respuesta = await fetch(`/api${ruta}`, { ...opciones, credentials: "include", headers });
 
   if (respuesta.status === 204) {
     return undefined as T;
@@ -56,6 +75,21 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
   }
   return datos as T;
 }
+
+export type Sesion = { id: string; rol: "admin" | "cliente" };
+
+export const registrarse = (email: string, clave: string) =>
+  pedir<{ ok: true }>("/auth/registro", { method: "POST", body: JSON.stringify({ email, clave }) });
+
+export const iniciarSesion = (email: string, clave: string) =>
+  pedir<{ ok: true; rol: Sesion["rol"] }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, clave }),
+  });
+
+export const cerrarSesion = () => pedir<{ ok: true }>("/auth/logout", { method: "POST" });
+
+export const obtenerSesion = () => pedir<Sesion>("/auth/yo");
 
 export const listarLibros = () => pedir<Libro[]>("/libros");
 

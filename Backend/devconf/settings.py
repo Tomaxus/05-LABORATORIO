@@ -15,12 +15,15 @@ ALLOWED_HOSTS: list[str] = []
 
 INSTALLED_APPS = [
     'django_mongodb_backend',
+    'devconf.apps.MongoContentTypesConfig',
+    'devconf.apps.MongoAuthConfig',
     'django.contrib.staticfiles',
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
     'django_extensions',
     'devconfsite',
+    'cuentas',
 ]
 
 MIDDLEWARE = [
@@ -41,6 +44,18 @@ SECURE_HSTS_SECONDS = 300  # 5 min: SOLO para el laboratorio
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Usuarios de Django sobre MongoDB (Parte 2)
+DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
+MIGRATION_MODULES = {
+    'auth': 'mongo_migrations.auth',
+    'contenttypes': 'mongo_migrations.contenttypes',
+}
+
+JWT_SECRET = os.environ['JWT_SECRET']  # se carga del .env
+
+# El frontend (Next) llega por su proxy desde este origen
+CSRF_TRUSTED_ORIGINS = ['https://localhost:3000', 'https://localhost:8443']
 
 ROOT_URLCONF = 'devconf.urls'
 

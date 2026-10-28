@@ -1,9 +1,12 @@
 from django.core.exceptions import ValidationError
+from django.utils.decorators import method_decorator
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema
+
+from cuentas.seguridad import autenticado
 
 from .models import Editorial, Libro
 from .serializers import EditorialDetailSerializer, EditorialSerializer, LibroSerializer
@@ -15,6 +18,7 @@ class LibroListCreateAPIView(APIView):
         queryset = Libro.objects.select_related("editorial").all()
         return Response(LibroSerializer(queryset, many=True).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Libros"], request=LibroSerializer, responses=LibroSerializer)
     def post(self, request):
         serializer = LibroSerializer(data=request.data)
@@ -37,6 +41,7 @@ class LibroDetailAPIView(APIView):
             return Response({"error": "Libro no encontrado."}, status=status.HTTP_404_NOT_FOUND)
         return Response(LibroSerializer(libro).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Libros"], request=LibroSerializer, responses=LibroSerializer)
     def put(self, request, libro_id):
         libro = self._get_object(libro_id)
@@ -47,6 +52,7 @@ class LibroDetailAPIView(APIView):
         libro = serializer.save()
         return Response(LibroSerializer(libro).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Libros"], request=LibroSerializer, responses=LibroSerializer)
     def patch(self, request, libro_id):
         libro = self._get_object(libro_id)
@@ -57,6 +63,7 @@ class LibroDetailAPIView(APIView):
         libro = serializer.save()
         return Response(LibroSerializer(libro).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Libros"], responses={204: None})
     def delete(self, request, libro_id):
         libro = self._get_object(libro_id)
@@ -72,6 +79,7 @@ class EditorialListCreateAPIView(APIView):
         queryset = Editorial.objects.order_by("nombre")
         return Response(EditorialSerializer(queryset, many=True).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Editoriales"], request=EditorialSerializer, responses=EditorialSerializer)
     def post(self, request):
         serializer = EditorialSerializer(data=request.data)
@@ -97,6 +105,7 @@ class EditorialDetailAPIView(APIView):
             )
         return Response(EditorialDetailSerializer(editorial).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Editoriales"], request=EditorialSerializer, responses=EditorialSerializer)
     def put(self, request, editorial_id):
         editorial = self._get_object(editorial_id)
@@ -110,6 +119,7 @@ class EditorialDetailAPIView(APIView):
         editorial = serializer.save()
         return Response(EditorialSerializer(editorial).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Editoriales"], request=EditorialSerializer, responses=EditorialSerializer)
     def patch(self, request, editorial_id):
         editorial = self._get_object(editorial_id)
@@ -123,6 +133,7 @@ class EditorialDetailAPIView(APIView):
         editorial = serializer.save()
         return Response(EditorialSerializer(editorial).data)
 
+    @method_decorator(autenticado())
     @extend_schema(tags=["Editoriales"], responses={204: None})
     def delete(self, request, editorial_id):
         editorial = self._get_object(editorial_id)

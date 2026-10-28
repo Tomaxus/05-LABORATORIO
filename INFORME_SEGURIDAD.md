@@ -26,12 +26,12 @@ En `settings.py`: `DEBUG = True`, `ALLOWED_HOSTS` vacío y `SECRET_KEY` escrita 
 | # | Hallazgo | OWASP | Evidencia | Corrección | Estado |
 |---|---|---|---|---|---|
 | 1 | `SECRET_KEY` en el código | A04 | `settings.py`, aviso W009 | | Pendiente |
-| 2 | Crear/editar/borrar sin login | A01 | `AllowAny` en la API | | Pendiente |
+| 2 | Crear/editar/borrar sin login | A01 | `AllowAny` en la API | Rutas de escritura con `@autenticado()` (falta el rol: Parte 3) | Mitigado |
 | 3 | CORS abierto | A02 | Respuesta con `access-control-allow-origin: *` | | Pendiente |
 | 4 | `DEBUG = True` | A02 | `settings.py`, aviso W018 | | Pendiente |
 | 5 | Sin HTTPS | A04 | Se abría con `http://` | HTTPS con mkcert | Corregido |
 | 6 | `ALLOWED_HOSTS` vacío | A02 | Aviso W020 | | Pendiente |
-| 7 | Sin login ni límite de intentos | A07 | No hay usuarios | | Pendiente |──────────────────────────────────────────────────────────────────────────────────────────────────────
+| 7 | Sin login ni límite de intentos | A07 | No hay usuarios | Registro con hash, login con JWT en cookie y límite de 5 intentos | Corregido |
 
 
 ## Parte 1 — HTTPS
@@ -40,5 +40,45 @@ Se generó un certificado local con mkcert. El backend corre en `https://localho
 
 ![HTTPS](evidencias/HTTPS.png)
 
+Chrome indica «La conexión es segura» (certificado de mkcert de confianza):
+![Conexión segura](evidencias/conexion-segura.png)
+
 **¿Qué garantías da HTTPS que HTTP no da? ¿Garantiza que el sitio sea honesto?**
 Da **cifrado** (nadie puede leer los datos en el camino) e **integridad** (nadie puede cambiarlos, y el certificado confirma el dominio). No garantiza que el sitio sea honesto: una página falsa también puede tener candado.
+
+## Parte 2 — Registro, login y límite de intentos
+
+- **Registro** (`/api/auth/registro/`): valida correo y clave de mínimo 10 caracteres. La contraseña se guarda con hash PBKDF2 y el rol lo pone el servidor (siempre `cliente`).
+- **Login** (`/api/auth/login/`): mensaje genérico «Usuario o contraseña incorrectos» y token JWT de 15 minutos en una cookie `HttpOnly`, `Secure` y `SameSite=Strict`.
+- **Rutas protegidas**: crear, editar y borrar libros o editoriales exigen sesión; el catálogo sigue público.
+- **Límite**: 5 intentos fallidos por IP cada 15 minutos; los fallos quedan registrados en la consola.
+- **Frontend**: página `/cuenta` para registrarse, iniciar y cerrar sesión.
+
+| Prueba | Resultado |
+|---|---|
+| Contraseña en la base de datos | `pbkdf2_sha256$1500000$...` (hash, no la clave) |
+| Registro enviando `"rol": "admin"` | El usuario queda como `cliente` |
+| Login correcto | 200 y cookie `token` con `HttpOnly` y `Secure` |
+| Crear libro sin sesión | 401 |
+| Sexto intento fallido | 429 |
+| `document.cookie` en la consola | No aparece `token` |
+
+**Evidencias**
+
+Contraseña guardada como hash PBKDF2 en Atlas (usuario `cliente`, `is_staff: false`):
+![Hash](evidencias/hash-password.png)
+
+Página de cuenta:
+![Login](evidencias/login.png)
+
+Cookie `token` con `HttpOnly`, `Secure` y `SameSite=Strict`:
+![Cookie](evidencias/cookie-httponly.png)
+
+`document.cookie` no muestra el `token`:
+![document.cookie](evidencias/document-cookie.png)
+
+Crear un libro sin sesión responde 401:
+![Sin sesión](evidencias/sin-sesion-401.png)
+
+Sexto intento fallido bloqueado (429):
+![Límite](evidencias/limite-429.png)

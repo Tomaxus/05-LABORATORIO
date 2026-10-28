@@ -22,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/libros" className="text-tinta-suave hover:underline">Catálogo</Link>
             <Link href="/libros/editoriales" className="text-tinta-suave hover:underline">Editoriales</Link>
             <Link href="/libros/autor" className="text-tinta-suave hover:underline">Sobre el autor</Link>
+            <Link href="/cuenta" className="text-tinta-suave hover:underline">Cuenta</Link>
           </nav>
         </header>
 

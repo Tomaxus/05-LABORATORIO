@@ -25,15 +25,16 @@ En `settings.py`: `DEBUG = True`, `ALLOWED_HOSTS` vacío y `SECRET_KEY` escrita 
 
 | # | Hallazgo | OWASP | Evidencia | Corrección | Estado |
 |---|---|---|---|---|---|
-| 1 | `SECRET_KEY` en el código | A04 | `settings.py`, aviso W009 | | Pendiente |
+| 1 | `SECRET_KEY` en el código | A04 | `settings.py`, aviso W009; estaba en el historial de git | Se lee del `.env` y se generó una nueva (rotada) | Corregido |
 | 2 | Crear/editar/borrar sin login | A01 | `AllowAny` en la API | Rutas de escritura solo para `admin` con `@autenticado(rol="admin")` | Corregido |
-| 3 | CORS abierto | A02 | Respuesta con `access-control-allow-origin: *` | | Pendiente |
-| 4 | `DEBUG = True` | A02 | `settings.py`, aviso W018 | | Pendiente |
+| 3 | CORS abierto | A02 | Respuesta con `access-control-allow-origin: *` | Solo `https://localhost:3000` | Corregido |
+| 4 | `DEBUG = True` | A02 | `settings.py`, aviso W018 | Se lee del `.env`; errores JSON genéricos | Corregido |
 | 5 | Sin HTTPS | A04 | Se abría con `http://` | HTTPS con mkcert | Corregido |
-| 6 | `ALLOWED_HOSTS` vacío | A02 | Aviso W020 | | Pendiente |
+| 6 | `ALLOWED_HOSTS` vacío | A02 | Aviso W020 | `['localhost', '127.0.0.1']` | Corregido |
 | 7 | Sin login ni límite de intentos | A07 | No hay usuarios | Registro con hash, login con JWT en cookie y límite de 5 intentos | Corregido |
 | 8 | XSS almacenado en reseñas (al crearlas) | A05 | `alert('XSS')` con `dangerouslySetInnerHTML` | Texto escapado por React + CSP con nonce | Corregido |
 | 9 | API de escritura sin protección CSRF (`csrf_exempt` de DRF) | A01 | `POST`/`DELETE` sin `X-CSRFToken` → 201/204 | Comprobación CSRF en `@autenticado` + `SameSite=Strict` | Corregido |
+| 10 | Dependencias con vulnerabilidades conocidas (Next.js crítica, Django, pymongo, python-dotenv) | A03 | `pip-audit`: 8; `npm audit`: 4 (1 crítica) | Paquetes actualizados | Corregido |
 
 
 ## Parte 1 — HTTPS
@@ -175,3 +176,31 @@ Página del atacante con la sesión de admin abierta → no se crea el libro:
 
 Desde el frontend sí se crea:
 ![Frontend](evidencias/csrf-frontend-ok.png)
+
+## Parte 6 — Secretos, CORS, errores y dependencias
+
+**Secretos**
+- `SECRET_KEY`, `JWT_SECRET` y la URI de Atlas se leen del `.env`, que está en `.gitignore`. Se creó `Backend/.env.example` sin valores reales.
+- La `SECRET_KEY` vieja estaba en el historial de git desde el primer commit, así que se **rotó** (se generó una nueva). La URI de Atlas nunca se subió (`git log --all -p -S"mongodb+srv"` solo muestra el ejemplo del README).
+- Si falta una variable, el servidor no arranca y dice cuál: `ImproperlyConfigured: Falta la variable JWT_SECRET en el archivo .env`.
+
+**CORS:** el frontend llega por el proxy de Next (mismo origen). Se quitó `CORS_ALLOW_ALL_ORIGINS` y solo se permite `https://localhost:3000`. Un origen externo ya no recibe `Access-Control-Allow-Origin`.
+
+**Errores:** con `DEBUG=0` las respuestas son genéricas y el detalle queda en la consola del servidor. También se quitó la página navegable de Django REST.
+
+| Prueba (`DEBUG=0`) | Resultado |
+|---|---|
+| Ruta inexistente | 404 `{"error": "No encontrado"}` |
+| Id mal formado | 404 `{"error": "Libro no encontrado."}` |
+| Host no permitido (`Host: evil.com`) | 400 sin detalle; la traza solo en la consola |
+| Pedir la API como HTML | 406, ya no muestra la página navegable |
+
+**Dependencias**
+
+| Herramienta | Antes | Después |
+|---|---|---|
+| `pip-audit` | 8 vulnerabilidades: Django 6.1, pymongo 4.15.3 (5), python-dotenv 1.2.1 | 0 (Django 6.1.1, pymongo 4.18.3, python-dotenv 1.2.2) |
+| `npm audit` | 4: **next 16.3.6 crítica** (ejecución remota de código, entre otras), sharp, source-map-js y zod altas | 0 (next 16.4.3 y `npm audit fix`) |
+| `check --deploy` | 7 problemas | 2: `mail.E001` (correo de consola, la app no envía correos) y `W021` (HSTS preload, no aplica en localhost) |
+
+**Atlas:** pendiente de revisar en el panel (Network Access y Database Access).

@@ -1,17 +1,27 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = 'django-insecure-m!(rbpe8c*+z^4znt%s6p4$%-0@0-&06p(n5p&+omly^4a(0f-'
 
-DEBUG = True
+def variable(nombre):
+    # falla con un mensaje claro si falta una variable del .env
+    try:
+        return os.environ[nombre]
+    except KeyError:
+        raise ImproperlyConfigured(f'Falta la variable {nombre} en el archivo .env (ver .env.example)')
 
-ALLOWED_HOSTS: list[str] = []
+
+SECRET_KEY = variable('DJANGO_SECRET_KEY')  # distinta a JWT_SECRET
+
+DEBUG = os.environ.get('DEBUG', '0') == '1'
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django_mongodb_backend',
@@ -35,7 +45,9 @@ MIDDLEWARE = [
     'cuentas.middleware.CSPMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# El frontend llega por el proxy de Next (mismo origen); solo se permite su origen
+CORS_ALLOWED_ORIGINS = ['https://localhost:3000']
+CORS_ALLOW_CREDENTIALS = True
 
 # HTTPS (Parte 1)
 SECURE_SSL_REDIRECT = True
@@ -53,7 +65,7 @@ MIGRATION_MODULES = {
     'contenttypes': 'mongo_migrations.contenttypes',
 }
 
-JWT_SECRET = os.environ['JWT_SECRET']  # se carga del .env
+JWT_SECRET = variable('JWT_SECRET')
 
 # CSRF (Parte 5)
 CSRF_COOKIE_SAMESITE = 'Strict'
@@ -69,7 +81,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django_mongodb_backend',
         'NAME': os.environ.get('MONGODB_NAME', 'devconf'),
-        'HOST': os.environ['MONGODB_URI'],
+        'HOST': variable('MONGODB_URI'),
     },
 }
 
@@ -100,7 +112,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
@@ -111,4 +122,15 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'API REST de biblioteca',
     'DESCRIPTION': 'Documentación OpenAPI para libros y editoriales.',
     'VERSION': '1.0.0',
+}
+
+# Errores: detalle solo en la consola del servidor (Parte 6.4)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'consola': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'django': {'handlers': ['consola'], 'level': 'INFO'},
+        'cuentas': {'handlers': ['consola'], 'level': 'WARNING'},
+    },
 }

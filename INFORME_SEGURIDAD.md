@@ -33,6 +33,7 @@ En `settings.py`: `DEBUG = True`, `ALLOWED_HOSTS` vacío y `SECRET_KEY` escrita 
 | 6 | `ALLOWED_HOSTS` vacío | A02 | Aviso W020 | | Pendiente |
 | 7 | Sin login ni límite de intentos | A07 | No hay usuarios | Registro con hash, login con JWT en cookie y límite de 5 intentos | Corregido |
 | 8 | XSS almacenado en reseñas (al crearlas) | A05 | `alert('XSS')` con `dangerouslySetInnerHTML` | Texto escapado por React + CSP con nonce | Corregido |
+| 9 | API de escritura sin protección CSRF (`csrf_exempt` de DRF) | A01 | `POST`/`DELETE` sin `X-CSRFToken` → 201/204 | Comprobación CSRF en `@autenticado` + `SameSite=Strict` | Corregido |
 
 
 ## Parte 1 — HTTPS
@@ -145,3 +146,32 @@ La CSP bloquea el `onerror` aunque el código sea vulnerable:
 
 Cabeceras de seguridad en la respuesta:
 ![Cabeceras](evidencias/cabeceras-csp.png)
+
+## Parte 5 — CSRF
+
+- **Hallazgo:** las vistas de Django REST vienen marcadas como `csrf_exempt`. Con la sesión de administrador, un `POST` y un `DELETE` **sin** la cabecera `X-CSRFToken` funcionaban (201 y 204).
+- **Corrección:** `@autenticado` repite la comprobación CSRF de Django en todo método que modifica datos (la cookie `csrftoken` debe coincidir con la cabecera `X-CSRFToken` y el origen debe ser de confianza). Además `CSRF_COOKIE_SAMESITE = 'Strict'` y `CSRF_COOKIE_HTTPONLY = False`.
+- **Frontend:** pide `/api/auth/csrf/` y envía `X-CSRFToken` en cada `POST`, `PUT` y `DELETE` (`lib/api.ts`).
+
+| Prueba | Resultado |
+|---|---|
+| `POST` sin `X-CSRFToken` | 403 «Token CSRF inválido» |
+| `POST` con token falso | 403 |
+| `POST` con token correcto pero desde otro origen | 403 |
+| `POST` / `DELETE` con token correcto | 201 / 204 |
+| `ataque.html` servido desde `http://127.0.0.1:9000` con sesión de admin abierta | El navegador no envía la cookie (SameSite) → 401, no se crea nada |
+| Crear un libro desde el frontend | Funciona |
+
+**¿Por qué alguien pondría `@csrf_exempt` «porque da error 403» y por qué es mala idea?**
+Porque el frontend no envía el token y el 403 «desaparece» al quitar la protección. Es mala idea porque cualquier página externa podría hacer peticiones con la sesión del usuario sin que él lo sepa. Lo correcto es enviar el token.
+
+**Si ya usamos `SameSite=Strict`, ¿por qué se añade además el token?**
+Por **defensa en profundidad**: navegadores antiguos no respetan `SameSite`, y un subdominio comprometido cuenta como el mismo sitio y sí recibiría la cookie. El token protege aunque falle la otra capa.
+
+**Evidencias**
+
+Página del atacante con la sesión de admin abierta → no se crea el libro:
+![Ataque bloqueado](evidencias/csrf-ataque-bloqueado.png)
+
+Desde el frontend sí se crea:
+![Frontend](evidencias/csrf-frontend-ok.png)

@@ -1,6 +1,6 @@
 # Informe de seguridad — Librería (Django + Next.js)
 
-**Estudiante:** Tomás Uribe Sánchez
+**Estudiantes:** Tomás Uribe Sánchez, Nicolás Rodríguez Acevedo
 **Proyecto:** `Backend/` (API Django REST + MongoDB Atlas, Lab 03) y `Frontend/` (Next.js, Lab 04)
 **Rama de trabajo:** `seguridad`
 

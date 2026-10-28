@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -20,3 +21,16 @@ urlpatterns = [
     path("api/auth/", include("cuentas.urls")),
     path("api/", include("devconfsite.urls")),
 ]
+
+
+# Respuesta genérica cuando DEBUG está apagado: sin rutas ni trazas
+def error_500(request):
+    return JsonResponse({"error": "Error interno"}, status=500)
+
+
+def error_404(request, exception):
+    return JsonResponse({"error": "No encontrado"}, status=404)
+
+
+handler500 = error_500
+handler404 = error_404

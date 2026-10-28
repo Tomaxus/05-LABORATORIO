@@ -46,6 +46,8 @@ export default function FormularioLibro({ tituloPagina, inicial, onGuardar }: Pr
         setErrores(error.datos as ErroresCampos);
       } else if (error instanceof ApiError && error.status === 401) {
         setErrores({ general: ["Debes iniciar sesión para guardar."] });
+      } else if (error instanceof ApiError && error.status === 403) {
+        setErrores({ general: ["Solo un administrador puede guardar libros."] });
       } else {
         setErrores({ general: ["No se pudo guardar. Revisa que la API esté corriendo."] });
       }

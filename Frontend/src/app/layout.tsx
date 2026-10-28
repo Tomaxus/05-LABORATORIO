@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import "./globals.css";
 
@@ -8,7 +9,10 @@ export const metadata: Metadata = {
   description: "Catálogo de libros de Paulo Coelho",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // render dinámico: el nonce de la CSP cambia en cada petición
+  await connection();
+
   return (
     <html lang="es" className="antialiased">
       <body>

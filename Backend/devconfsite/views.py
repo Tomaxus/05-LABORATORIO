@@ -163,7 +163,14 @@ class ResenaListCreateAPIView(APIView):
     @method_decorator(autenticado())
     @extend_schema(tags=["Reseñas"], responses=ResenaSerializer(many=True))
     def get(self, request):
-        return Response(ResenaSerializer(_resenas_visibles(request), many=True).data)
+        queryset = _resenas_visibles(request)
+        libro_id = request.query_params.get("libro")
+        if libro_id:
+            try:
+                queryset = list(queryset.filter(libro_id=libro_id))
+            except ValidationError:
+                queryset = []
+        return Response(ResenaSerializer(queryset, many=True).data)
 
     @method_decorator(autenticado())
     @extend_schema(tags=["Reseñas"], request=ResenaSerializer, responses=ResenaSerializer)
